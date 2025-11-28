@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { doc, setDoc, onSnapshot, collection, query, getDocs, deleteDoc, where } from 'firebase/firestore'
+import { doc, setDoc, onSnapshot, collection, query, getDocs, deleteDoc } from 'firebase/firestore'
 import { db, auth } from '../firebase'
 import { signOut } from 'firebase/auth'
 import { Button } from "@/components/ui/button"
