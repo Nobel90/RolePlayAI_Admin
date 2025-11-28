@@ -266,7 +266,7 @@ export function Dashboard() {
         } catch (error: any) {
             console.error("Error saving settings:", error);
             const errorMessage = error?.code === 'permission-denied' 
-                ? "Permission denied. Please check Firestore security rules. The authenticated user needs write access to 'settings/apps/apps/{appId}'."
+                ? "Permission denied. Please check Firestore security rules. The authenticated user needs write access to 'apps/{appId}'."
                 : error?.message || "Failed to save settings.";
             alert(errorMessage);
         } finally {
