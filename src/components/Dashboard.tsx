@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { doc, setDoc, onSnapshot } from 'firebase/firestore'
+import { doc, setDoc, onSnapshot, collection, query, getDocs, deleteDoc, where } from 'firebase/firestore'
 import { db, auth } from '../firebase'
 import { signOut } from 'firebase/auth'
 import { Button } from "@/components/ui/button"
@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, Plus, Trash2, X } from 'lucide-react'
 
 // Define types for our settings
 interface HeaderLink {
@@ -24,6 +24,8 @@ interface BackgroundImage {
 }
 
 interface LauncherSettings {
+    appId?: string;
+    name?: string;
     ui: {
         gameTitle: string;
         tagline: string;
@@ -40,6 +42,15 @@ interface LauncherSettings {
         active: boolean;
         text: string;
     };
+    metadata?: {
+        createdAt?: any;
+        updatedAt?: any;
+    };
+}
+
+interface AppInfo {
+    appId: string;
+    name: string;
 }
 
 const DEFAULT_SETTINGS: LauncherSettings = {
@@ -81,13 +92,120 @@ export function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
+    const [selectedAppId, setSelectedAppId] = useState<string>('RolePlayAI');
+    const [apps, setApps] = useState<AppInfo[]>([]);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [newAppName, setNewAppName] = useState('');
+    const [newAppId, setNewAppId] = useState('');
 
+    // Load all apps
     useEffect(() => {
-        const unsubscribe = onSnapshot(doc(db, "settings", "launcher"),
+        const loadApps = async () => {
+            try {
+                const appsRef = collection(db, "apps");
+                const q = query(appsRef);
+                const querySnapshot = await getDocs(q);
+                const appsList: AppInfo[] = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    appsList.push({
+                        appId: doc.id,
+                        name: data.name || doc.id
+                    });
+                });
+                
+                // If no apps found, create default RolePlayAI app
+                if (appsList.length === 0) {
+                    try {
+                        // Try to migrate from legacy launcher document
+                        const legacyDoc = doc(db, "settings", "launcher");
+                        const legacyUnsub = onSnapshot(legacyDoc, async (legacySnapshot) => {
+                            if (legacySnapshot.exists()) {
+                                const legacySettings = legacySnapshot.data() as LauncherSettings;
+                                await setDoc(doc(db, "apps", "RolePlayAI"), {
+                                    appId: 'RolePlayAI',
+                                    name: 'Role Play AI',
+                                    ...legacySettings,
+                                    metadata: {
+                                        createdAt: new Date(),
+                                        updatedAt: new Date()
+                                    }
+                                });
+                                appsList.push({ appId: 'RolePlayAI', name: 'Role Play AI' });
+                                setApps(appsList);
+                            } else {
+                                // Create default RolePlayAI app
+                                await setDoc(doc(db, "apps", "RolePlayAI"), {
+                                    appId: 'RolePlayAI',
+                                    name: 'Role Play AI',
+                                    ...DEFAULT_SETTINGS,
+                                    metadata: {
+                                        createdAt: new Date(),
+                                        updatedAt: new Date()
+                                    }
+                                });
+                                appsList.push({ appId: 'RolePlayAI', name: 'Role Play AI' });
+                                setApps(appsList);
+                            }
+                            legacyUnsub();
+                        }, () => {
+                            // Error reading legacy, create default
+                            setDoc(doc(db, "apps", "RolePlayAI"), {
+                                appId: 'RolePlayAI',
+                                name: 'Role Play AI',
+                                ...DEFAULT_SETTINGS,
+                                metadata: {
+                                    createdAt: new Date(),
+                                    updatedAt: new Date()
+                                }
+                            }).then(() => {
+                                appsList.push({ appId: 'RolePlayAI', name: 'Role Play AI' });
+                                setApps(appsList);
+                            });
+                        });
+                    } catch (migrateError) {
+                        // Create default RolePlayAI app
+                        await setDoc(doc(db, "apps", "RolePlayAI"), {
+                            appId: 'RolePlayAI',
+                            name: 'Role Play AI',
+                            ...DEFAULT_SETTINGS,
+                            metadata: {
+                                createdAt: new Date(),
+                                updatedAt: new Date()
+                            }
+                        });
+                        appsList.push({ appId: 'RolePlayAI', name: 'Role Play AI' });
+                        setApps(appsList);
+                    }
+                }
+                
+                setApps(appsList);
+                if (appsList.length > 0 && !appsList.find(a => a.appId === selectedAppId)) {
+                    setSelectedAppId(appsList[0].appId);
+                }
+            } catch (error: any) {
+                console.error("Error loading apps:", error);
+                // Fallback: create default app
+                if (apps.length === 0) {
+                    setApps([{ appId: 'RolePlayAI', name: 'Role Play AI' }]);
+                }
+            }
+        };
+        loadApps();
+    }, []);
+
+    // Load settings for selected app
+    useEffect(() => {
+        if (!selectedAppId) return;
+        
+        const unsubscribe = onSnapshot(doc(db, "apps", selectedAppId),
             (doc) => {
                 if (doc.exists()) {
                     const data = doc.data() as LauncherSettings;
                     setSettings({
+                        appId: data.appId || selectedAppId,
+                        name: data.name,
                         ui: {
                             ...DEFAULT_SETTINGS.ui,
                             ...data.ui,
@@ -97,7 +215,15 @@ export function Dashboard() {
                             backgroundTransitionTime: data.ui?.backgroundTransitionTime !== undefined ? data.ui.backgroundTransitionTime : DEFAULT_SETTINGS.ui.backgroundTransitionTime,
                             backgroundDisplayTime: data.ui?.backgroundDisplayTime !== undefined ? data.ui.backgroundDisplayTime : DEFAULT_SETTINGS.ui.backgroundDisplayTime
                         },
-                        news: { ...DEFAULT_SETTINGS.news, ...data.news }
+                        news: { ...DEFAULT_SETTINGS.news, ...data.news },
+                        metadata: data.metadata
+                    });
+                } else {
+                    // App doesn't exist, use defaults
+                    setSettings({
+                        ...DEFAULT_SETTINGS,
+                        appId: selectedAppId,
+                        name: apps.find(a => a.appId === selectedAppId)?.name || selectedAppId
                     });
                 }
                 setLoading(false);
@@ -114,23 +240,99 @@ export function Dashboard() {
             }
         );
         return () => unsubscribe();
-    }, []);
+    }, [selectedAppId, apps]);
 
     const handleSave = async () => {
+        if (!selectedAppId) return;
         setSaving(true);
         setSaveSuccess(false);
         try {
-            await setDoc(doc(db, "settings", "launcher"), settings);
+            await setDoc(doc(db, "apps", selectedAppId), {
+                ...settings,
+                appId: selectedAppId,
+                name: settings.name || apps.find(a => a.appId === selectedAppId)?.name || selectedAppId,
+                metadata: {
+                    ...settings.metadata,
+                    updatedAt: new Date()
+                }
+            });
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 3000);
+            
+            // Update apps list if name changed
+            if (settings.name) {
+                setApps(apps.map(a => a.appId === selectedAppId ? { ...a, name: settings.name! } : a));
+            }
         } catch (error: any) {
             console.error("Error saving settings:", error);
             const errorMessage = error?.code === 'permission-denied' 
-                ? "Permission denied. Please check Firestore security rules. The authenticated user needs write access to 'settings/launcher'."
+                ? "Permission denied. Please check Firestore security rules. The authenticated user needs write access to 'settings/apps/apps/{appId}'."
                 : error?.message || "Failed to save settings.";
             alert(errorMessage);
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleCreateApp = async () => {
+        if (!newAppId || !newAppName) {
+            alert("Please provide both App ID and App Name");
+            return;
+        }
+        
+        // Validate appId (alphanumeric and underscores only)
+        if (!/^[a-zA-Z0-9_]+$/.test(newAppId)) {
+            alert("App ID must contain only letters, numbers, and underscores");
+            return;
+        }
+        
+        // Check if app already exists
+        const appExists = apps.find(a => a.appId === newAppId);
+        if (appExists) {
+            alert("An app with this ID already exists");
+            return;
+        }
+        
+        try {
+            await setDoc(doc(db, "apps", newAppId), {
+                appId: newAppId,
+                name: newAppName,
+                ...DEFAULT_SETTINGS,
+                metadata: {
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                }
+            });
+            
+            setApps([...apps, { appId: newAppId, name: newAppName }]);
+            setSelectedAppId(newAppId);
+            setShowCreateModal(false);
+            setNewAppId('');
+            setNewAppName('');
+        } catch (error: any) {
+            console.error("Error creating app:", error);
+            alert("Failed to create app: " + (error?.message || "Unknown error"));
+        }
+    };
+
+    const handleDeleteApp = async () => {
+        if (!selectedAppId || selectedAppId === 'RolePlayAI') {
+            alert("Cannot delete the default RolePlayAI app");
+            setShowDeleteModal(false);
+            return;
+        }
+        
+        try {
+            await deleteDoc(doc(db, "apps", selectedAppId));
+            const newApps = apps.filter(a => a.appId !== selectedAppId);
+            setApps(newApps);
+            if (newApps.length > 0) {
+                setSelectedAppId(newApps[0].appId);
+            }
+            setShowDeleteModal(false);
+        } catch (error: any) {
+            console.error("Error deleting app:", error);
+            alert("Failed to delete app: " + (error?.message || "Unknown error"));
         }
     };
 
@@ -160,7 +362,7 @@ export function Dashboard() {
                         <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
                             Launcher Admin
                         </h1>
-                        <p className="text-slate-400">Manage your RolePlayAI Launcher configuration in real-time</p>
+                        <p className="text-slate-400">Manage your apps and launcher configuration in real-time</p>
                     </div>
                     <Button 
                         variant="outline" 
@@ -170,6 +372,144 @@ export function Dashboard() {
                         Sign Out
                     </Button>
                 </div>
+
+                {/* App Selector */}
+                <Card className="bg-slate-800/80 backdrop-blur-xl border-slate-700/50 shadow-2xl mb-6">
+                    <CardContent className="p-4">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-4 flex-1">
+                                <Label className="text-slate-300 font-medium whitespace-nowrap">Select App:</Label>
+                                <select
+                                    value={selectedAppId}
+                                    onChange={(e) => setSelectedAppId(e.target.value)}
+                                    className="flex-1 bg-slate-700/50 border border-slate-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-purple-500 focus:ring-purple-500/20"
+                                >
+                                    {apps.map((app) => (
+                                        <option key={app.appId} value={app.appId}>
+                                            {app.name} ({app.appId})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowCreateModal(true)}
+                                    className="border-slate-600 text-slate-300 hover:bg-slate-700/50"
+                                >
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Create App
+                                </Button>
+                                {selectedAppId !== 'RolePlayAI' && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowDeleteModal(true)}
+                                        className="border-red-600/50 text-red-400 hover:bg-red-600/10 hover:text-red-300"
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Create App Modal */}
+                {showCreateModal && (
+                    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                        <Card className="bg-slate-800 border-slate-700 w-full max-w-md">
+                            <CardHeader>
+                                <div className="flex justify-between items-center">
+                                    <CardTitle className="text-white">Create New App</CardTitle>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                            setShowCreateModal(false);
+                                            setNewAppId('');
+                                            setNewAppName('');
+                                        }}
+                                        className="text-slate-400 hover:text-white"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label className="text-slate-300">App ID</Label>
+                                    <Input
+                                        className="bg-slate-700/50 border-slate-600 text-white"
+                                        value={newAppId}
+                                        onChange={(e) => setNewAppId(e.target.value)}
+                                        placeholder="e.g., MyNewApp"
+                                    />
+                                    <p className="text-xs text-slate-500">Only letters, numbers, and underscores allowed</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-slate-300">App Name</Label>
+                                    <Input
+                                        className="bg-slate-700/50 border-slate-600 text-white"
+                                        value={newAppName}
+                                        onChange={(e) => setNewAppName(e.target.value)}
+                                        placeholder="e.g., My New App"
+                                    />
+                                </div>
+                                <div className="flex gap-2 justify-end pt-4">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            setShowCreateModal(false);
+                                            setNewAppId('');
+                                            setNewAppName('');
+                                        }}
+                                        className="border-slate-600 text-slate-300"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        onClick={handleCreateApp}
+                                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                                    >
+                                        Create
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
+
+                {/* Delete Confirmation Modal */}
+                {showDeleteModal && (
+                    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+                        <Card className="bg-slate-800 border-slate-700 w-full max-w-md">
+                            <CardHeader>
+                                <CardTitle className="text-white text-red-400">Delete App</CardTitle>
+                                <CardDescription className="text-slate-400">
+                                    Are you sure you want to delete "{apps.find(a => a.appId === selectedAppId)?.name}"? This action cannot be undone.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex gap-2 justify-end pt-4">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowDeleteModal(false)}
+                                        className="border-slate-600 text-slate-300"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        onClick={handleDeleteApp}
+                                        className="bg-red-600 hover:bg-red-700 text-white"
+                                    >
+                                        Delete
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
 
                 <Tabs defaultValue="general" className="w-full space-y-6">
                     <TabsList className="grid w-full grid-cols-5 bg-slate-800/50 p-1.5 rounded-xl border border-slate-700/50 backdrop-blur-sm">
@@ -215,6 +555,16 @@ export function Dashboard() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
+                                <div className="space-y-2">
+                                    <Label className="text-slate-300 text-base font-medium">App Name</Label>
+                                    <Input
+                                        className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all"
+                                        value={settings.name || ''}
+                                        onChange={(e) => setSettings({ ...settings, name: e.target.value })}
+                                        placeholder="Role Play AI"
+                                    />
+                                    <p className="text-xs text-slate-500">Display name for this app</p>
+                                </div>
                                 <div className="space-y-2">
                                     <Label className="text-slate-300 text-base font-medium">Game Title</Label>
                                     <Input
