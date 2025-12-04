@@ -10,43 +10,11 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { CheckCircle2, Plus, Trash2, X } from 'lucide-react'
-
-// Define types for our settings
-interface HeaderLink {
-    text: string;
-    url: string;
-    order: number;
-}
-
-interface BackgroundImage {
-    url: string;
-    order: number;
-}
-
-interface LauncherSettings {
-    appId?: string;
-    name?: string;
-    ui: {
-        gameTitle: string;
-        tagline: string;
-        buttons: Record<string, string>;
-        backgroundImageUrl?: string;
-        backgroundImages?: BackgroundImage[];
-        backgroundTransitionTime?: number;
-        backgroundDisplayTime?: number;
-        logoUrl?: string;
-        gameName?: string;
-        headerLinks?: HeaderLink[];
-    };
-    news: {
-        active: boolean;
-        text: string;
-    };
-    metadata?: {
-        createdAt?: any;
-        updatedAt?: any;
-    };
-}
+import { DLCManager } from './DLCManager'
+import { R2SyncButton } from './R2SyncButton'
+import { CatalogPublisher } from './CatalogPublisher'
+import type { LauncherSettings } from '../types/settings'
+import { migrateToBuildTypes, needsMigration } from '../utils/migration'
 
 interface AppInfo {
     appId: string;
@@ -93,11 +61,13 @@ export function Dashboard() {
     const [saving, setSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [selectedAppId, setSelectedAppId] = useState<string>('RolePlayAI');
+    const [selectedBuildType, setSelectedBuildType] = useState<'production' | 'staging'>('production');
     const [apps, setApps] = useState<AppInfo[]>([]);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [newAppName, setNewAppName] = useState('');
     const [newAppId, setNewAppId] = useState('');
+    const [dlcRefreshKey, setDlcRefreshKey] = useState(0);
 
     // Load all apps
     useEffect(() => {
@@ -200,9 +170,22 @@ export function Dashboard() {
         if (!selectedAppId) return;
         
         const unsubscribe = onSnapshot(doc(db, "apps", selectedAppId),
-            (doc) => {
-                if (doc.exists()) {
-                    const data = doc.data() as LauncherSettings;
+            async (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    let data = docSnapshot.data() as LauncherSettings;
+                    
+                    // Migrate if needed
+                    if (needsMigration(data)) {
+                        console.log('Migrating data to buildTypes structure...');
+                        data = migrateToBuildTypes(data);
+                        // Save migrated data back to Firebase
+                        try {
+                            await setDoc(doc(db, "apps", selectedAppId), data, { merge: true });
+                        } catch (error) {
+                            console.error('Error saving migrated data:', error);
+                        }
+                    }
+                    
                     setSettings({
                         appId: data.appId || selectedAppId,
                         name: data.name,
@@ -216,6 +199,11 @@ export function Dashboard() {
                             backgroundDisplayTime: data.ui?.backgroundDisplayTime !== undefined ? data.ui.backgroundDisplayTime : DEFAULT_SETTINGS.ui.backgroundDisplayTime
                         },
                         news: { ...DEFAULT_SETTINGS.news, ...data.news },
+                        buildTypes: data.buildTypes || {
+                            production: {},
+                            staging: {}
+                        },
+                        r2Config: data.r2Config,
                         metadata: data.metadata
                     });
                 } else {
@@ -223,7 +211,11 @@ export function Dashboard() {
                     setSettings({
                         ...DEFAULT_SETTINGS,
                         appId: selectedAppId,
-                        name: apps.find(a => a.appId === selectedAppId)?.name || selectedAppId
+                        name: apps.find(a => a.appId === selectedAppId)?.name || selectedAppId,
+                        buildTypes: {
+                            production: {},
+                            staging: {}
+                        }
                     });
                 }
                 setLoading(false);
@@ -247,15 +239,35 @@ export function Dashboard() {
         setSaving(true);
         setSaveSuccess(false);
         try {
-            await setDoc(doc(db, "apps", selectedAppId), {
+            // Ensure buildTypes structure exists
+            const buildTypes = settings.buildTypes || {
+                production: {},
+                staging: {}
+            };
+            
+            // Get current build type data
+            const currentBuildTypeData = buildTypes[selectedBuildType] || {};
+            
+            // Prepare data to save - merge with existing buildTypes
+            const dataToSave: LauncherSettings = {
                 ...settings,
                 appId: selectedAppId,
                 name: settings.name || apps.find(a => a.appId === selectedAppId)?.name || selectedAppId,
+                buildTypes: {
+                    ...buildTypes,
+                    [selectedBuildType]: currentBuildTypeData
+                },
                 metadata: {
                     ...settings.metadata,
                     updatedAt: new Date()
                 }
-            });
+            };
+            
+            // Remove legacy fields if they exist
+            delete (dataToSave as any).version;
+            delete (dataToSave as any).dlcs;
+            
+            await setDoc(doc(db, "apps", selectedAppId), dataToSave);
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 3000);
             
@@ -390,6 +402,15 @@ export function Dashboard() {
                                         </option>
                                     ))}
                                 </select>
+                                <Label className="text-slate-300 font-medium whitespace-nowrap">Build Type:</Label>
+                                <select
+                                    value={selectedBuildType}
+                                    onChange={(e) => setSelectedBuildType(e.target.value as 'production' | 'staging')}
+                                    className="bg-slate-700/50 border border-slate-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-purple-500 focus:ring-purple-500/20"
+                                >
+                                    <option value="production">Production</option>
+                                    <option value="staging">Staging</option>
+                                </select>
                             </div>
                             <div className="flex gap-2">
                                 <Button
@@ -512,36 +533,48 @@ export function Dashboard() {
                 )}
 
                 <Tabs defaultValue="general" className="w-full space-y-6">
-                    <TabsList className="grid w-full grid-cols-5 bg-slate-800/50 p-1.5 rounded-xl border border-slate-700/50 backdrop-blur-sm">
+                    <TabsList className="grid w-full grid-cols-7 bg-slate-800/50 p-1.5 rounded-xl border border-slate-700/50 backdrop-blur-sm">
                         <TabsTrigger 
                             value="general" 
-                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all"
+                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-xs"
                         >
                             General UI
                         </TabsTrigger>
                         <TabsTrigger 
                             value="visual" 
-                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all"
+                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-xs"
                         >
                             Visual Assets
                         </TabsTrigger>
                         <TabsTrigger 
                             value="links" 
-                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all"
+                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-xs"
                         >
                             Header Links
                         </TabsTrigger>
                         <TabsTrigger 
                             value="news" 
-                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all"
+                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-xs"
                         >
                             News Bar
                         </TabsTrigger>
                         <TabsTrigger 
                             value="buttons" 
-                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all"
+                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-xs"
                         >
                             Button Texts
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="dlc" 
+                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-xs"
+                        >
+                            DLC
+                        </TabsTrigger>
+                        <TabsTrigger 
+                            value="r2settings" 
+                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-xs"
+                        >
+                            R2 Storage
                         </TabsTrigger>
                     </TabsList>
 
@@ -878,6 +911,134 @@ export function Dashboard() {
                                             />
                                         </div>
                                     ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* Additional Content (DLC) Settings */}
+                    <TabsContent value="dlc" className="space-y-4 animate-fade-in">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-semibold text-white">DLC Management</h3>
+                            <div className="flex gap-2">
+                                <R2SyncButton
+                                    appId={selectedAppId}
+                                    buildType={selectedBuildType}
+                                    currentVersion={settings.buildTypes?.[selectedBuildType]?.version}
+                                    currentDLCs={settings.buildTypes?.[selectedBuildType]?.dlcs || {}}
+                                    onSyncComplete={() => {
+                                        // Force DLCManager to refresh by incrementing key
+                                        setDlcRefreshKey(prev => prev + 1);
+                                    }}
+                                />
+                                <CatalogPublisher
+                                    buildTypes={settings.buildTypes || {}}
+                                />
+                            </div>
+                        </div>
+                        <DLCManager appId={selectedAppId} buildType={selectedBuildType} key={`dlc-${selectedAppId}-${selectedBuildType}-${dlcRefreshKey}`} />
+                    </TabsContent>
+
+                    {/* R2 Storage Settings */}
+                    <TabsContent value="r2settings" className="space-y-4 animate-fade-in">
+                        <Card className="bg-slate-800/80 backdrop-blur-xl border-slate-700/50 shadow-2xl">
+                            <CardHeader>
+                                <CardTitle className="text-2xl text-white">R2 Storage Configuration</CardTitle>
+                                <CardDescription className="text-slate-400">
+                                    Configure Cloudflare R2 credentials for automatic catalog.json uploads.
+                                    These credentials are stored securely in Firebase.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30 mb-4">
+                                    <p className="text-sm text-blue-400">
+                                        <strong>Note:</strong> These credentials are used to automatically upload catalog.json to R2 when you sync DLCs.
+                                        You can get these from your Cloudflare R2 dashboard → Manage R2 API Tokens.
+                                    </p>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label className="text-slate-300 text-base font-medium">Account ID</Label>
+                                        <Input
+                                            className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all font-mono text-sm"
+                                            value={settings.r2Config?.accountId || ''}
+                                            onChange={(e) => setSettings({ 
+                                                ...settings, 
+                                                r2Config: { ...settings.r2Config, accountId: e.target.value } 
+                                            })}
+                                            placeholder="Your Cloudflare Account ID"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-slate-300 text-base font-medium">Bucket Name</Label>
+                                        <Input
+                                            className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all font-mono text-sm"
+                                            value={settings.r2Config?.bucket || 'vrcentre-roleplay-ai-bucket'}
+                                            onChange={(e) => setSettings({ 
+                                                ...settings, 
+                                                r2Config: { ...settings.r2Config, bucket: e.target.value } 
+                                            })}
+                                            placeholder="vrcentre-roleplay-ai-bucket"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-slate-300 text-base font-medium">R2 Endpoint URL</Label>
+                                    <Input
+                                        className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all font-mono text-sm"
+                                        value={settings.r2Config?.endpoint || ''}
+                                        onChange={(e) => setSettings({ 
+                                            ...settings, 
+                                            r2Config: { ...settings.r2Config, endpoint: e.target.value } 
+                                        })}
+                                        placeholder="https://<account-id>.r2.cloudflarestorage.com"
+                                    />
+                                    <p className="text-xs text-slate-500">Format: https://{'<account-id>'}.r2.cloudflarestorage.com</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-slate-300 text-base font-medium">Access Key ID</Label>
+                                    <Input
+                                        className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all font-mono text-sm"
+                                        value={settings.r2Config?.accessKeyId || ''}
+                                        onChange={(e) => setSettings({ 
+                                            ...settings, 
+                                            r2Config: { ...settings.r2Config, accessKeyId: e.target.value } 
+                                        })}
+                                        placeholder="R2 Access Key ID"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-slate-300 text-base font-medium">Secret Access Key</Label>
+                                    <Input
+                                        type="password"
+                                        className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all font-mono text-sm"
+                                        value={settings.r2Config?.secretAccessKey || ''}
+                                        onChange={(e) => setSettings({ 
+                                            ...settings, 
+                                            r2Config: { ...settings.r2Config, secretAccessKey: e.target.value } 
+                                        })}
+                                        placeholder="R2 Secret Access Key"
+                                    />
+                                    <p className="text-xs text-slate-500">This is stored encrypted in Firebase</p>
+                                </div>
+                                <div className="pt-4 border-t border-slate-700">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm text-slate-300 font-medium">Connection Status</p>
+                                            <p className="text-xs text-slate-500">
+                                                {settings.r2Config?.accessKeyId && settings.r2Config?.secretAccessKey 
+                                                    ? 'Credentials configured - Save to enable auto-upload' 
+                                                    : 'No credentials configured - catalog.json will be saved to Firebase only'}
+                                            </p>
+                                        </div>
+                                        <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                            settings.r2Config?.accessKeyId && settings.r2Config?.secretAccessKey
+                                                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                                : 'bg-slate-600/50 text-slate-400 border border-slate-500/30'
+                                        }`}>
+                                            {settings.r2Config?.accessKeyId && settings.r2Config?.secretAccessKey ? 'Configured' : 'Not Configured'}
+                                        </div>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>

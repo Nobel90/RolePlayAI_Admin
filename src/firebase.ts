@@ -1,6 +1,6 @@
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 // Firebase configuration from environment variables
 // For local development, use .env.local file
@@ -17,11 +17,31 @@ const firebaseConfig = {
 
 // Validate that all required environment variables are present
 if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-    throw new Error("Missing required Firebase configuration. Please check your environment variables.");
+    const errorMsg = "Missing required Firebase configuration. Please check your environment variables.";
+    console.error(errorMsg);
+    console.error("Config received:", {
+        apiKey: firebaseConfig.apiKey ? "✓" : "✗",
+        projectId: firebaseConfig.projectId ? "✓" : "✗",
+        authDomain: firebaseConfig.authDomain ? "✓" : "✗",
+    });
+    console.error("Make sure you have a .env.local file with VITE_FIREBASE_* variables");
+    // Still try to initialize - Firebase will throw a more descriptive error
 }
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
+
+try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    console.log("Firebase initialized successfully");
+} catch (error: any) {
+    console.error("Firebase initialization error:", error);
+    throw new Error(`Firebase initialization failed: ${error.message}`);
+}
+
+export { auth, db };
 
