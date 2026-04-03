@@ -24,7 +24,7 @@ match /settings/{document=**} {
 ## Setup Steps
 
 1. **Go to Firebase Console**: https://console.firebase.google.com/
-2. **Select Project**: `vr-centre-7bdac`
+2. **Select Project**: `vrcentre-roleplayai-website`
 3. **Navigate to**: Firestore Database → **Rules** tab
 4. **Copy the entire content** from `firestore.rules` file
 5. **Paste** into the Firebase Console rules editor

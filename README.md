@@ -69,7 +69,7 @@ npm run dev
 npm run firebase:login
 ```
 
-2. **Verify Firebase project** (should be `vr-centre-7bdac`):
+2. **Verify Firebase project** (should be `vrcentre-roleplayai-website`):
 ```bash
 npm run firebase:use
 ```
@@ -98,8 +98,8 @@ For production builds, Vite automatically uses `.env.production` when running `n
 ### Access Your Deployed Site
 
 After deployment, your site will be available at:
-- `https://vr-centre-7bdac.web.app`
-- `https://vr-centre-7bdac.firebaseapp.com`
+- `https://vrcentre-roleplayai-website.web.app`
+- `https://vrcentre-roleplayai-website.firebaseapp.com`
 
 You can also set up a custom domain in the Firebase Console.
 

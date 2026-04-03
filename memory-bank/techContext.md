@@ -41,10 +41,10 @@
   - `.env.production` for production builds
 
 ## Firebase Project
-- **Project ID**: `vr-centre-7bdac`
+- **Project ID**: `vrcentre-roleplayai-website`
 - **Hosting URLs**:
-  - `https://vr-centre-7bdac.web.app`
-  - `https://vr-centre-7bdac.firebaseapp.com`
+  - `https://vrcentre-roleplayai-website.web.app`
+  - `https://vrcentre-roleplayai-website.firebaseapp.com`
 
 ## R2 Integration
 - **Base URL**: `https://pub-f87e49b41fad4c0fad84e94d65ed13cc.r2.dev`
