@@ -34,7 +34,8 @@ export interface DLCCatalogEntry {
     version: string;
     manifestUrl: string;
     requiredBaseVersion: string | null;
-    requiredDLCs: Array<{ id: string; minVersion: string }>;
+    requiredModules: Array<{ id: string; minVersion: string }>;
+    requiredDLCs?: Array<{ id: string; minVersion: string }>;
     description: string;
     iconUrl: string;
     size: number;
@@ -103,6 +104,7 @@ export function manifestDLCToCatalogEntry(
         version: manifest.version || '1.0.0',
         manifestUrl: manifestUrl,
         requiredBaseVersion: dlcInfo.requiredBaseVersion || null,
+        requiredModules: dlcInfo.requiredModules || dlcInfo.requiredDLCs || [],
         requiredDLCs: dlcInfo.requiredDLCs || [],
         description: dlcInfo.description || '',
         iconUrl: dlcInfo.iconUrl || '',

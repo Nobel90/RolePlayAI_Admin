@@ -17,9 +17,9 @@
    Create a `.env.production` file in the project root:
    ```
    VITE_FIREBASE_API_KEY=AIzaSyDgXMCkVl-ne68k6_SwQDr9yakNNomVttM
-   VITE_FIREBASE_AUTH_DOMAIN=vrcentre-roleplayai-website.firebaseapp.com
-   VITE_FIREBASE_PROJECT_ID=vrcentre-roleplayai-website
-   VITE_FIREBASE_STORAGE_BUCKET=vrcentre-roleplayai-website.firebasestorage.app
+   VITE_FIREBASE_AUTH_DOMAIN=vr-centre-7bdac.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=vr-centre-7bdac
+   VITE_FIREBASE_STORAGE_BUCKET=vr-centre-7bdac.firebasestorage.app
    VITE_FIREBASE_MESSAGING_SENDER_ID=594002655240
    VITE_FIREBASE_APP_ID=1:594002655240:web:cf661f2cba121d8aa179bd
    VITE_FIREBASE_MEASUREMENT_ID=G-CGZDF7355G
@@ -68,8 +68,8 @@ firebase deploy --only hosting
 
 ### 4. Verify Deployment
 After deployment, Firebase will provide a URL like:
-- `https://vrcentre-roleplayai-website.web.app`
-- `https://vrcentre-roleplayai-website.firebaseapp.com`
+- `https://vr-centre-7bdac.web.app`
+- `https://vr-centre-7bdac.firebaseapp.com`
 
 Visit the URL to verify the site is live.
 

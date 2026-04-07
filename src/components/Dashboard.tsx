@@ -45,8 +45,8 @@ const DEFAULT_SETTINGS: LauncherSettings = {
         logoUrl: "",
         gameName: "",
         headerLinks: [
-            { text: "WEBSITE", url: "https://vrcentre.com.au/", order: 1 },
-            { text: "MY ACCOUNT", url: "https://vrcentre.com.au/account/", order: 2 }
+            { text: "WEBSITE", url: "https://roleplayai.com/", order: 1 },
+            { text: "ACCOUNT", url: "https://roleplayai.com/account/", order: 2 }
         ]
     },
     news: {
@@ -354,47 +354,52 @@ export function Dashboard() {
 
     if (loading) {
         return (
-            <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-                <div className="text-center space-y-4">
-                    <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                    <p className="text-slate-400">Loading settings...</p>
+            <div className="admin-shell flex h-screen items-center justify-center p-4">
+                <div className="admin-panel w-full max-w-md p-8 text-center space-y-5 animate-fade-in">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-border/80 bg-background">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-foreground border-t-transparent" />
+                    </div>
+                    <div className="space-y-1">
+                        <h2 className="text-xl font-semibold">Loading settings</h2>
+                        <p className="text-sm text-muted-foreground">Restoring the selected app and its configuration.</p>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-20"></div>
+        <div className="admin-shell min-h-screen bg-background text-foreground">
             
-            <div className="container mx-auto p-6 max-w-6xl relative z-10">
+            <div className="container mx-auto max-w-7xl p-4 sm:p-6 relative z-10">
                 {/* Header */}
-                <div className="flex justify-between items-center mb-8 pb-6 border-b border-slate-700/50">
+                <div className="mb-8 flex flex-col gap-5 border-b border-border/80 pb-6 lg:flex-row lg:items-end lg:justify-between">
                     <div>
-                        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
-                            Launcher Admin
-                        </h1>
-                        <p className="text-slate-400">Manage your apps and launcher configuration in real-time</p>
+                        <p className="admin-kicker mb-2">Launcher admin</p>
+                        <h1 className="admin-title mb-2">RolePlayAI Admin</h1>
+                        <p className="admin-subtitle max-w-2xl">
+                            Manage your apps, launcher configuration, DLC content, and catalog publishing from one monochrome workspace.
+                        </p>
                     </div>
                     <Button 
                         variant="outline" 
                         onClick={handleSignOut} 
-                        className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                        className="w-full lg:w-auto"
                     >
                         Sign Out
                     </Button>
                 </div>
 
                 {/* App Selector */}
-                <Card className="bg-slate-800/80 backdrop-blur-xl border-slate-700/50 shadow-2xl mb-6">
+                <Card className="admin-panel mb-6">
                     <CardContent className="p-4">
-                        <div className="flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-4 flex-1">
-                                <Label className="text-slate-300 font-medium whitespace-nowrap">Select App:</Label>
+                        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                            <div className="grid flex-1 gap-4 md:grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,240px)] md:items-center">
+                                <Label className="admin-kicker whitespace-nowrap">Select app</Label>
                                 <select
                                     value={selectedAppId}
                                     onChange={(e) => setSelectedAppId(e.target.value)}
-                                    className="flex-1 bg-slate-700/50 border border-slate-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-purple-500 focus:ring-purple-500/20"
+                                    className="h-10 w-full rounded-full border border-input/80 bg-background/80 px-4 text-sm outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring"
                                 >
                                     {apps.map((app) => (
                                         <option key={app.appId} value={app.appId}>
@@ -402,21 +407,20 @@ export function Dashboard() {
                                         </option>
                                     ))}
                                 </select>
-                                <Label className="text-slate-300 font-medium whitespace-nowrap">Build Type:</Label>
+                                <Label className="admin-kicker whitespace-nowrap">Build type</Label>
                                 <select
                                     value={selectedBuildType}
                                     onChange={(e) => setSelectedBuildType(e.target.value as 'production' | 'staging')}
-                                    className="bg-slate-700/50 border border-slate-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:border-purple-500 focus:ring-purple-500/20"
+                                    className="h-10 w-full rounded-full border border-input/80 bg-background/80 px-4 text-sm outline-none transition-all focus-visible:ring-2 focus-visible:ring-ring"
                                 >
                                     <option value="production">Production</option>
                                     <option value="staging">Staging</option>
                                 </select>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                                 <Button
                                     variant="outline"
                                     onClick={() => setShowCreateModal(true)}
-                                    className="border-slate-600 text-slate-300 hover:bg-slate-700/50"
                                 >
                                     <Plus className="w-4 h-4 mr-2" />
                                     Create App
@@ -425,7 +429,7 @@ export function Dashboard() {
                                     <Button
                                         variant="outline"
                                         onClick={() => setShowDeleteModal(true)}
-                                        className="border-red-600/50 text-red-400 hover:bg-red-600/10 hover:text-red-300"
+                                        className="border-red-500/30 text-red-600 hover:bg-red-500/5 hover:text-red-700"
                                     >
                                         <Trash2 className="w-4 h-4 mr-2" />
                                         Delete
@@ -439,10 +443,10 @@ export function Dashboard() {
                 {/* Create App Modal */}
                 {showCreateModal && (
                     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                        <Card className="bg-slate-800 border-slate-700 w-full max-w-md">
+                        <Card className="admin-panel w-full max-w-md">
                             <CardHeader>
                                 <div className="flex justify-between items-center">
-                                    <CardTitle className="text-white">Create New App</CardTitle>
+                                    <CardTitle>Create New App</CardTitle>
                                     <Button
                                         variant="ghost"
                                         size="sm"
@@ -461,17 +465,15 @@ export function Dashboard() {
                                 <div className="space-y-2">
                                     <Label className="text-slate-300">App ID</Label>
                                     <Input
-                                        className="bg-slate-700/50 border-slate-600 text-white"
                                         value={newAppId}
                                         onChange={(e) => setNewAppId(e.target.value)}
                                         placeholder="e.g., MyNewApp"
                                     />
-                                    <p className="text-xs text-slate-500">Only letters, numbers, and underscores allowed</p>
+                                    <p className="text-xs text-muted-foreground">Only letters, numbers, and underscores allowed</p>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-slate-300">App Name</Label>
+                                    <Label>App Name</Label>
                                     <Input
-                                        className="bg-slate-700/50 border-slate-600 text-white"
                                         value={newAppName}
                                         onChange={(e) => setNewAppName(e.target.value)}
                                         placeholder="e.g., My New App"
@@ -485,13 +487,11 @@ export function Dashboard() {
                                             setNewAppId('');
                                             setNewAppName('');
                                         }}
-                                        className="border-slate-600 text-slate-300"
                                     >
                                         Cancel
                                     </Button>
                                     <Button
                                         onClick={handleCreateApp}
-                                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
                                     >
                                         Create
                                     </Button>
@@ -504,10 +504,10 @@ export function Dashboard() {
                 {/* Delete Confirmation Modal */}
                 {showDeleteModal && (
                     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                        <Card className="bg-slate-800 border-slate-700 w-full max-w-md">
+                        <Card className="admin-panel w-full max-w-md">
                             <CardHeader>
-                                <CardTitle className="text-white text-red-400">Delete App</CardTitle>
-                                <CardDescription className="text-slate-400">
+                                <CardTitle className="text-red-600">Delete App</CardTitle>
+                                <CardDescription>
                                     Are you sure you want to delete "{apps.find(a => a.appId === selectedAppId)?.name}"? This action cannot be undone.
                                 </CardDescription>
                             </CardHeader>
@@ -516,13 +516,12 @@ export function Dashboard() {
                                     <Button
                                         variant="outline"
                                         onClick={() => setShowDeleteModal(false)}
-                                        className="border-slate-600 text-slate-300"
                                     >
                                         Cancel
                                     </Button>
                                     <Button
                                         onClick={handleDeleteApp}
-                                        className="bg-red-600 hover:bg-red-700 text-white"
+                                        className="bg-red-600 text-white hover:bg-red-700"
                                     >
                                         Delete
                                     </Button>
@@ -533,46 +532,46 @@ export function Dashboard() {
                 )}
 
                 <Tabs defaultValue="general" className="w-full space-y-6">
-                    <TabsList className="grid w-full grid-cols-7 bg-slate-800/50 p-1.5 rounded-xl border border-slate-700/50 backdrop-blur-sm">
+                    <TabsList className="grid w-full grid-cols-2 gap-2 overflow-x-auto p-2 lg:grid-cols-7">
                         <TabsTrigger 
                             value="general" 
-                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-xs"
+                            className="text-xs"
                         >
                             General UI
                         </TabsTrigger>
                         <TabsTrigger 
                             value="visual" 
-                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-xs"
+                            className="text-xs"
                         >
                             Visual Assets
                         </TabsTrigger>
                         <TabsTrigger 
                             value="links" 
-                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-xs"
+                            className="text-xs"
                         >
                             Header Links
                         </TabsTrigger>
                         <TabsTrigger 
                             value="news" 
-                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-xs"
+                            className="text-xs"
                         >
                             News Bar
                         </TabsTrigger>
                         <TabsTrigger 
                             value="buttons" 
-                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-xs"
+                            className="text-xs"
                         >
                             Button Texts
                         </TabsTrigger>
                         <TabsTrigger 
                             value="dlc" 
-                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-xs"
+                            className="text-xs"
                         >
                             DLC
                         </TabsTrigger>
                         <TabsTrigger 
                             value="r2settings" 
-                            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all text-xs"
+                            className="text-xs"
                         >
                             R2 Storage
                         </TabsTrigger>
@@ -580,10 +579,10 @@ export function Dashboard() {
 
                     {/* General Settings */}
                     <TabsContent value="general" className="space-y-4 animate-fade-in">
-                        <Card className="bg-slate-800/80 backdrop-blur-xl border-slate-700/50 shadow-2xl">
+                        <Card className="admin-panel">
                             <CardHeader>
-                                <CardTitle className="text-2xl text-white">General UI Settings</CardTitle>
-                                <CardDescription className="text-slate-400">
+                                <CardTitle>General UI Settings</CardTitle>
+                                <CardDescription>
                                     Customize the main title and tagline displayed in the launcher.
                                 </CardDescription>
                             </CardHeader>
@@ -620,10 +619,10 @@ export function Dashboard() {
 
                     {/* Visual Assets Settings */}
                     <TabsContent value="visual" className="space-y-4 animate-fade-in">
-                        <Card className="bg-slate-800/80 backdrop-blur-xl border-slate-700/50 shadow-2xl">
+                        <Card className="admin-panel">
                             <CardHeader>
-                                <CardTitle className="text-2xl text-white">Visual Assets</CardTitle>
-                                <CardDescription className="text-slate-400">
+                                <CardTitle>Visual Assets</CardTitle>
+                                <CardDescription>
                                     Customize background image, logo, and game name in the sidebar.
                                 </CardDescription>
                             </CardHeader>
@@ -631,26 +630,25 @@ export function Dashboard() {
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
                                         <Label className="text-slate-300 text-base font-medium">Background Images (Slideshow)</Label>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
                                             onClick={() => {
                                                 const newImages = [...(settings.ui.backgroundImages || [])];
                                                 const maxOrder = newImages.length > 0 ? Math.max(...newImages.map(img => img.order || 0)) : 0;
                                                 newImages.push({ url: "", order: maxOrder + 1 });
                                                 setSettings({ ...settings, ui: { ...settings.ui, backgroundImages: newImages } });
                                             }}
-                                            className="border-slate-600 text-slate-300 hover:bg-slate-700/50"
-                                        >
-                                            + Add Image
-                                        </Button>
+                                            >
+                                                + Add Image
+                                            </Button>
                                     </div>
                                     {settings.ui.backgroundImages && settings.ui.backgroundImages
                                         .sort((a, b) => (a.order || 0) - (b.order || 0))
                                         .map((image, index) => {
                                             const originalIndex = settings.ui.backgroundImages?.findIndex(img => img === image) || index;
                                             return (
-                                                <div key={originalIndex} className="p-4 rounded-lg bg-slate-700/30 border border-slate-600/50 space-y-3">
+                                                <div key={originalIndex} className="admin-muted-panel p-4 space-y-3">
                                                     <div className="flex justify-between items-center">
                                                         <Label className="text-slate-300 font-medium">Image #{image.order || originalIndex + 1}</Label>
                                                         <Button
@@ -660,15 +658,14 @@ export function Dashboard() {
                                                                 const newImages = settings.ui.backgroundImages?.filter((_, i) => i !== originalIndex) || [];
                                                                 setSettings({ ...settings, ui: { ...settings.ui, backgroundImages: newImages } });
                                                             }}
-                                                            className="border-red-600/50 text-red-400 hover:bg-red-600/10 hover:text-red-300"
+                                                            className="border-red-500/30 text-red-600 hover:bg-red-500/5 hover:text-red-700"
                                                         >
                                                             Remove
                                                         </Button>
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <Label className="text-sm text-slate-400">Image URL</Label>
+                                                        <Label className="text-sm text-muted-foreground">Image URL</Label>
                                                         <Input
-                                                            className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20"
                                                             value={image.url}
                                                             onChange={(e) => {
                                                                 const newImages = [...(settings.ui.backgroundImages || [])];
@@ -679,10 +676,9 @@ export function Dashboard() {
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <Label className="text-sm text-slate-400">Order</Label>
+                                                        <Label className="text-sm text-muted-foreground">Order</Label>
                                                         <Input
                                                             type="number"
-                                                            className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 w-24"
                                                             value={image.order || originalIndex + 1}
                                                             onChange={(e) => {
                                                                 const newImages = [...(settings.ui.backgroundImages || [])];
@@ -695,12 +691,12 @@ export function Dashboard() {
                                             );
                                         })}
                                     {(!settings.ui.backgroundImages || settings.ui.backgroundImages.length === 0) && (
-                                        <p className="text-xs text-slate-500 text-center py-4">No background images. Add one to enable slideshow. If empty, single background image URL will be used.</p>
+                                        <p className="text-xs text-muted-foreground text-center py-4">No background images. Add one to enable slideshow. If empty, a single background image URL will be used.</p>
                                     )}
                                 </div>
-                                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-700/50">
+                                <div className="grid grid-cols-1 gap-4 pt-4 border-t border-border/80 md:grid-cols-2">
                                     <div className="space-y-2">
-                                        <Label className="text-slate-300 text-base font-medium">Transition Time (ms)</Label>
+                                        <Label className="text-base font-medium">Transition Time (ms)</Label>
                                         <Input
                                             type="number"
                                             className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20"
@@ -708,10 +704,10 @@ export function Dashboard() {
                                             onChange={(e) => setSettings({ ...settings, ui: { ...settings.ui, backgroundTransitionTime: parseInt(e.target.value) || 1000 } })}
                                             placeholder="1000"
                                         />
-                                        <p className="text-xs text-slate-500">Fade in/out duration</p>
+                                        <p className="text-xs text-muted-foreground">Fade in/out duration</p>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-slate-300 text-base font-medium">Display Time (ms)</Label>
+                                        <Label className="text-base font-medium">Display Time (ms)</Label>
                                         <Input
                                             type="number"
                                             className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20"
@@ -719,38 +715,38 @@ export function Dashboard() {
                                             onChange={(e) => setSettings({ ...settings, ui: { ...settings.ui, backgroundDisplayTime: parseInt(e.target.value) || 5000 } })}
                                             placeholder="5000"
                                         />
-                                        <p className="text-xs text-slate-500">Time each image stays</p>
+                                        <p className="text-xs text-muted-foreground">Time each image stays</p>
                                     </div>
                                 </div>
-                                <div className="space-y-2 pt-4 border-t border-slate-700/50">
-                                    <Label className="text-slate-300 text-base font-medium">Single Background Image URL (Fallback)</Label>
+                                <div className="space-y-2 pt-4 border-t border-border/80">
+                                    <Label className="text-base font-medium">Single Background Image URL (Fallback)</Label>
                                     <Input
                                         className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all"
                                         value={settings.ui.backgroundImageUrl || ''}
                                         onChange={(e) => setSettings({ ...settings, ui: { ...settings.ui, backgroundImageUrl: e.target.value } })}
                                         placeholder="https://example.com/background.jpg"
                                     />
-                                    <p className="text-xs text-slate-500">Used if slideshow is empty or disabled</p>
+                                    <p className="text-xs text-muted-foreground">Used if slideshow is empty or disabled</p>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-slate-300 text-base font-medium">Sidebar Logo URL</Label>
+                                    <Label className="text-base font-medium">Sidebar Logo URL</Label>
                                     <Input
                                         className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all"
                                         value={settings.ui.logoUrl || ''}
                                         onChange={(e) => setSettings({ ...settings, ui: { ...settings.ui, logoUrl: e.target.value } })}
                                         placeholder="https://example.com/logo.png"
                                     />
-                                    <p className="text-xs text-slate-500">Leave empty to use default logo</p>
+                                    <p className="text-xs text-muted-foreground">Leave empty to use default logo</p>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-slate-300 text-base font-medium">Sidebar Game Name</Label>
+                                    <Label className="text-base font-medium">Sidebar Game Name</Label>
                                     <Input
                                         className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all"
                                         value={settings.ui.gameName || ''}
                                         onChange={(e) => setSettings({ ...settings, ui: { ...settings.ui, gameName: e.target.value } })}
                                         placeholder="Role Play AI"
                                     />
-                                    <p className="text-xs text-slate-500">Text displayed next to logo in sidebar</p>
+                                    <p className="text-xs text-muted-foreground">Text displayed next to logo in sidebar</p>
                                 </div>
                             </CardContent>
                         </Card>
@@ -758,10 +754,10 @@ export function Dashboard() {
 
                     {/* Header Links Settings */}
                     <TabsContent value="links" className="space-y-4 animate-fade-in">
-                        <Card className="bg-slate-800/80 backdrop-blur-xl border-slate-700/50 shadow-2xl">
+                        <Card className="admin-panel">
                             <CardHeader>
-                                <CardTitle className="text-2xl text-white">Header Links</CardTitle>
-                                <CardDescription className="text-slate-400">
+                                <CardTitle>Header Links</CardTitle>
+                                <CardDescription>
                                     Manage the navigation links in the launcher header.
                                 </CardDescription>
                             </CardHeader>
@@ -771,9 +767,9 @@ export function Dashboard() {
                                     .map((link, index) => {
                                         const originalIndex = settings.ui.headerLinks?.findIndex(l => l === link) || index;
                                         return (
-                                        <div key={originalIndex} className="p-4 rounded-lg bg-slate-700/30 border border-slate-600/50 space-y-3">
+                                        <div key={originalIndex} className="admin-muted-panel p-4 space-y-3">
                                             <div className="flex justify-between items-center">
-                                                <Label className="text-slate-300 font-medium">Link #{link.order || originalIndex + 1}</Label>
+                                                <Label className="font-medium">Link #{link.order || originalIndex + 1}</Label>
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
@@ -781,16 +777,15 @@ export function Dashboard() {
                                                         const newLinks = settings.ui.headerLinks?.filter((_, i) => i !== originalIndex) || [];
                                                         setSettings({ ...settings, ui: { ...settings.ui, headerLinks: newLinks } });
                                                     }}
-                                                    className="border-red-600/50 text-red-400 hover:bg-red-600/10 hover:text-red-300"
+                                                    className="border-red-500/30 text-red-600 hover:bg-red-500/5 hover:text-red-700"
                                                 >
                                                     Remove
                                                 </Button>
                                             </div>
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div className="space-y-2">
-                                                    <Label className="text-sm text-slate-400">Link Text</Label>
+                                                    <Label className="text-sm text-muted-foreground">Link Text</Label>
                                                     <Input
-                                                        className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20"
                                                         value={link.text}
                                                         onChange={(e) => {
                                                             const newLinks = [...(settings.ui.headerLinks || [])];
@@ -800,9 +795,8 @@ export function Dashboard() {
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <Label className="text-sm text-slate-400">URL</Label>
+                                                    <Label className="text-sm text-muted-foreground">URL</Label>
                                                     <Input
-                                                        className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20"
                                                         value={link.url}
                                                         onChange={(e) => {
                                                             const newLinks = [...(settings.ui.headerLinks || [])];
@@ -813,10 +807,9 @@ export function Dashboard() {
                                                 </div>
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-sm text-slate-400">Order</Label>
+                                                <Label className="text-sm text-muted-foreground">Order</Label>
                                                 <Input
                                                     type="number"
-                                                    className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 w-24"
                                                     value={link.order || originalIndex + 1}
                                                     onChange={(e) => {
                                                         const newLinks = [...(settings.ui.headerLinks || [])];
@@ -828,40 +821,40 @@ export function Dashboard() {
                                         </div>
                                     );
                                 })}
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        const newLinks = [...(settings.ui.headerLinks || [])];
-                                        const maxOrder = newLinks.length > 0 ? Math.max(...newLinks.map(l => l.order || 0)) : 0;
-                                        newLinks.push({ text: "NEW LINK", url: "https://example.com", order: maxOrder + 1 });
-                                        setSettings({ ...settings, ui: { ...settings.ui, headerLinks: newLinks } });
-                                    }}
-                                    className="w-full border-slate-600 text-slate-300 hover:bg-slate-700/50"
-                                >
-                                    + Add Link
-                                </Button>
-                            </CardContent>
-                        </Card>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    const newLinks = [...(settings.ui.headerLinks || [])];
+                                    const maxOrder = newLinks.length > 0 ? Math.max(...newLinks.map(l => l.order || 0)) : 0;
+                                    newLinks.push({ text: "NEW LINK", url: "https://example.com", order: maxOrder + 1 });
+                                    setSettings({ ...settings, ui: { ...settings.ui, headerLinks: newLinks } });
+                                }}
+                                className="w-full"
+                            >
+                                + Add Link
+                            </Button>
+                        </CardContent>
+                    </Card>
                     </TabsContent>
 
                     {/* News Settings */}
                     <TabsContent value="news" className="space-y-4 animate-fade-in">
-                        <Card className="bg-slate-800/80 backdrop-blur-xl border-slate-700/50 shadow-2xl">
+                        <Card className="admin-panel">
                             <CardHeader>
-                                <CardTitle className="text-2xl text-white">News Bar</CardTitle>
-                                <CardDescription className="text-slate-400">
+                                <CardTitle>News Bar</CardTitle>
+                                <CardDescription>
                                     Manage the news ticker/banner in the launcher.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                <div className="flex items-center justify-between p-4 rounded-lg bg-slate-700/30 border border-slate-600/50">
+                                <div className="flex items-center justify-between rounded-2xl border border-border/80 bg-muted/30 p-4">
                                     <div className="flex items-center space-x-3">
                                         <Switch
                                             id="news-active"
                                             checked={settings.news.active}
                                             onCheckedChange={(checked) => setSettings({ ...settings, news: { ...settings.news, active: checked } })}
                                         />
-                                        <Label htmlFor="news-active" className="text-base text-slate-300 cursor-pointer font-medium">
+                                        <Label htmlFor="news-active" className="cursor-pointer text-base font-medium">
                                             Show News Bar
                                         </Label>
                                     </div>
@@ -872,9 +865,8 @@ export function Dashboard() {
                                     )}
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-slate-300 text-base font-medium">News Content</Label>
+                                    <Label className="text-base font-medium">News Content</Label>
                                     <Textarea
-                                        className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all min-h-[120px] resize-none"
                                         value={settings.news.text}
                                         onChange={(e) => setSettings({ ...settings, news: { ...settings.news, text: e.target.value } })}
                                         rows={4}
@@ -887,10 +879,10 @@ export function Dashboard() {
 
                     {/* Button Text Settings */}
                     <TabsContent value="buttons" className="space-y-4 animate-fade-in">
-                        <Card className="bg-slate-800/80 backdrop-blur-xl border-slate-700/50 shadow-2xl">
+                        <Card className="admin-panel">
                             <CardHeader>
-                                <CardTitle className="text-2xl text-white">Button Text Configuration</CardTitle>
-                                <CardDescription className="text-slate-400">
+                                <CardTitle>Button Text Configuration</CardTitle>
+                                <CardDescription>
                                     Customize what the main action button says in different states.
                                 </CardDescription>
                             </CardHeader>
@@ -898,11 +890,10 @@ export function Dashboard() {
                                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                     {Object.entries(settings.ui.buttons).map(([key, value]) => (
                                         <div key={key} className="space-y-2">
-                                            <Label className="capitalize text-sm text-slate-400 font-medium">
+                                            <Label className="capitalize text-sm font-medium">
                                                 {key.replace(/_/g, ' ')}
                                             </Label>
                                             <Input
-                                                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all"
                                                 value={value}
                                                 onChange={(e) => {
                                                     const newButtons = { ...settings.ui.buttons, [key]: e.target.value };
@@ -919,19 +910,21 @@ export function Dashboard() {
                     {/* Additional Content (DLC) Settings */}
                     <TabsContent value="dlc" className="space-y-4 animate-fade-in">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-semibold text-white">DLC Management</h3>
+                            <h3 className="text-xl font-semibold">DLC Management</h3>
                             <div className="flex gap-2">
                                 <R2SyncButton
                                     appId={selectedAppId}
                                     buildType={selectedBuildType}
                                     currentVersion={settings.buildTypes?.[selectedBuildType]?.version}
                                     currentDLCs={settings.buildTypes?.[selectedBuildType]?.dlcs || {}}
+                                    r2Config={settings.r2Config}
                                     onSyncComplete={() => {
                                         // Force DLCManager to refresh by incrementing key
                                         setDlcRefreshKey(prev => prev + 1);
                                     }}
                                 />
                                 <CatalogPublisher
+                                    r2Config={settings.r2Config}
                                     buildTypes={settings.buildTypes || {}}
                                 />
                             </div>
@@ -941,26 +934,25 @@ export function Dashboard() {
 
                     {/* R2 Storage Settings */}
                     <TabsContent value="r2settings" className="space-y-4 animate-fade-in">
-                        <Card className="bg-slate-800/80 backdrop-blur-xl border-slate-700/50 shadow-2xl">
+                        <Card className="admin-panel">
                             <CardHeader>
-                                <CardTitle className="text-2xl text-white">R2 Storage Configuration</CardTitle>
-                                <CardDescription className="text-slate-400">
+                                <CardTitle>R2 Storage Configuration</CardTitle>
+                                <CardDescription>
                                     Configure Cloudflare R2 credentials for automatic catalog.json uploads.
                                     These credentials are stored securely in Firebase.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
-                                <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30 mb-4">
-                                    <p className="text-sm text-blue-400">
+                                <div className="mb-4 rounded-2xl border border-border/80 bg-muted/30 p-4">
+                                    <p className="text-sm text-foreground">
                                         <strong>Note:</strong> These credentials are used to automatically upload catalog.json to R2 when you sync DLCs.
                                         You can get these from your Cloudflare R2 dashboard → Manage R2 API Tokens.
                                     </p>
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <div className="space-y-2">
-                                        <Label className="text-slate-300 text-base font-medium">Account ID</Label>
+                                        <Label className="text-base font-medium">Account ID</Label>
                                         <Input
-                                            className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all font-mono text-sm"
                                             value={settings.r2Config?.accountId || ''}
                                             onChange={(e) => setSettings({ 
                                                 ...settings, 
@@ -970,22 +962,34 @@ export function Dashboard() {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label className="text-slate-300 text-base font-medium">Bucket Name</Label>
+                                        <Label className="text-base font-medium">Bucket Name</Label>
                                         <Input
-                                            className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all font-mono text-sm"
-                                            value={settings.r2Config?.bucket || 'vrcentre-roleplay-ai-bucket'}
+                                            value={settings.r2Config?.bucket || 'roleplayai-launcher'}
                                             onChange={(e) => setSettings({ 
                                                 ...settings, 
                                                 r2Config: { ...settings.r2Config, bucket: e.target.value } 
                                             })}
-                                            placeholder="vrcentre-roleplay-ai-bucket"
+                                            placeholder="roleplayai-launcher"
                                         />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-slate-300 text-base font-medium">R2 Endpoint URL</Label>
+                                    <Label className="text-base font-medium">Public R2 Base URL</Label>
                                     <Input
-                                        className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all font-mono text-sm"
+                                        value={settings.r2Config?.publicBaseUrl || ''}
+                                        onChange={(e) => setSettings({
+                                            ...settings,
+                                            r2Config: { ...settings.r2Config, publicBaseUrl: e.target.value }
+                                        })}
+                                        placeholder="https://pub-xxxx.r2.dev"
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Used for catalog.json and manifest lookups. Leave empty to use the built-in default.
+                                    </p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-base font-medium">R2 Endpoint URL</Label>
+                                    <Input
                                         value={settings.r2Config?.endpoint || ''}
                                         onChange={(e) => setSettings({ 
                                             ...settings, 
@@ -993,12 +997,11 @@ export function Dashboard() {
                                         })}
                                         placeholder="https://<account-id>.r2.cloudflarestorage.com"
                                     />
-                                    <p className="text-xs text-slate-500">Format: https://{'<account-id>'}.r2.cloudflarestorage.com</p>
+                                    <p className="text-xs text-muted-foreground">Format: https://{'<account-id>'}.r2.cloudflarestorage.com</p>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-slate-300 text-base font-medium">Access Key ID</Label>
+                                    <Label className="text-base font-medium">Access Key ID</Label>
                                     <Input
-                                        className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all font-mono text-sm"
                                         value={settings.r2Config?.accessKeyId || ''}
                                         onChange={(e) => setSettings({ 
                                             ...settings, 
@@ -1008,10 +1011,9 @@ export function Dashboard() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-slate-300 text-base font-medium">Secret Access Key</Label>
+                                    <Label className="text-base font-medium">Secret Access Key</Label>
                                     <Input
                                         type="password"
-                                        className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20 transition-all font-mono text-sm"
                                         value={settings.r2Config?.secretAccessKey || ''}
                                         onChange={(e) => setSettings({ 
                                             ...settings, 
@@ -1019,13 +1021,13 @@ export function Dashboard() {
                                         })}
                                         placeholder="R2 Secret Access Key"
                                     />
-                                    <p className="text-xs text-slate-500">This is stored encrypted in Firebase</p>
+                                    <p className="text-xs text-muted-foreground">This is stored encrypted in Firebase</p>
                                 </div>
-                                <div className="pt-4 border-t border-slate-700">
+                                <div className="pt-4 border-t border-border/80">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <p className="text-sm text-slate-300 font-medium">Connection Status</p>
-                                            <p className="text-xs text-slate-500">
+                                            <p className="text-sm font-medium">Connection Status</p>
+                                            <p className="text-xs text-muted-foreground">
                                                 {settings.r2Config?.accessKeyId && settings.r2Config?.secretAccessKey 
                                                     ? 'Credentials configured - Save to enable auto-upload' 
                                                     : 'No credentials configured - catalog.json will be saved to Firebase only'}
@@ -1033,8 +1035,8 @@ export function Dashboard() {
                                         </div>
                                         <div className={`px-3 py-1 rounded-full text-xs font-medium ${
                                             settings.r2Config?.accessKeyId && settings.r2Config?.secretAccessKey
-                                                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                                : 'bg-slate-600/50 text-slate-400 border border-slate-500/30'
+                                                ? 'bg-green-500/10 text-green-700 border border-green-500/20'
+                                                : 'bg-muted text-muted-foreground border border-border/80'
                                         }`}>
                                             {settings.r2Config?.accessKeyId && settings.r2Config?.secretAccessKey ? 'Configured' : 'Not Configured'}
                                         </div>
@@ -1048,7 +1050,7 @@ export function Dashboard() {
                 {/* Save Button */}
                 <div className="mt-8 flex justify-end items-center gap-4">
                     {saveSuccess && (
-                        <div className="flex items-center gap-2 text-green-400 animate-fade-in">
+                        <div className="flex items-center gap-2 text-green-700 animate-fade-in">
                             <CheckCircle2 className="w-5 h-5" />
                             <span className="text-sm font-medium">Settings saved successfully!</span>
                         </div>
@@ -1057,7 +1059,7 @@ export function Dashboard() {
                         size="lg"
                         onClick={handleSave}
                         disabled={saving}
-                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8"
+                        className="px-8"
                     >
                         {saving ? (
                             <>

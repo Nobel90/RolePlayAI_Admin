@@ -13,15 +13,17 @@ import {
 } from '../services/catalogPublisher';
 import type { Catalog } from '../types/catalog';
 import type { DLC } from '../types/dlc';
+import type { R2Config } from '../types/settings';
 
 interface CatalogPublisherProps {
     buildTypes: {
         production?: { version?: string; dlcs?: Record<string, DLC> };
         staging?: { version?: string; dlcs?: Record<string, DLC> };
     };
+    r2Config?: R2Config;
 }
 
-export function CatalogPublisher({ buildTypes }: CatalogPublisherProps) {
+export function CatalogPublisher({ buildTypes, r2Config }: CatalogPublisherProps) {
     const [showPreview, setShowPreview] = useState(false);
     const [loading, setLoading] = useState(false);
     const [catalog, setCatalog] = useState<Catalog | null>(null);
@@ -33,7 +35,7 @@ export function CatalogPublisher({ buildTypes }: CatalogPublisherProps) {
         setLoading(true);
         try {
             // Generate new catalog from Firebase data
-            const newCatalog = generateCatalog(buildTypes);
+            const newCatalog = generateCatalog(buildTypes, r2Config);
             setCatalog(newCatalog);
 
             // Validate
@@ -41,7 +43,7 @@ export function CatalogPublisher({ buildTypes }: CatalogPublisherProps) {
             setValidationErrors(validation.errors);
 
             // Fetch current catalog from R2 for comparison
-            const existing = await fetchCurrentCatalog();
+            const existing = await fetchCurrentCatalog(r2Config);
             setCurrentCatalog(existing);
 
             // Compare catalogs
@@ -72,7 +74,6 @@ export function CatalogPublisher({ buildTypes }: CatalogPublisherProps) {
                 variant="outline"
                 onClick={handlePreview}
                 disabled={loading}
-                className="border-green-600/50 text-green-400 hover:bg-green-600/10 hover:text-green-300"
             >
                 {loading ? (
                     <>
@@ -89,15 +90,15 @@ export function CatalogPublisher({ buildTypes }: CatalogPublisherProps) {
 
             {showPreview && catalog && (
                 <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                    <Card className="bg-slate-800 border-slate-700 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <Card className="admin-panel w-full max-w-4xl max-h-[90vh] overflow-y-auto">
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <CardTitle className="text-white flex items-center gap-2">
-                                        <FileJson className="w-5 h-5 text-green-400" />
+                                    <CardTitle className="flex items-center gap-2">
+                                        <FileJson className="w-5 h-5 text-foreground" />
                                         Catalog Preview
                                     </CardTitle>
-                                    <CardDescription className="text-slate-400">
+                                    <CardDescription>
                                         Review the catalog before publishing to R2
                                     </CardDescription>
                                 </div>
@@ -108,7 +109,7 @@ export function CatalogPublisher({ buildTypes }: CatalogPublisherProps) {
                                         setShowPreview(false);
                                         setCatalog(null);
                                     }}
-                                    className="text-slate-400 hover:text-white"
+                                    className="text-muted-foreground hover:text-foreground"
                                 >
                                     <X className="w-4 h-4" />
                                 </Button>
@@ -117,12 +118,12 @@ export function CatalogPublisher({ buildTypes }: CatalogPublisherProps) {
                         <CardContent className="space-y-6">
                             {/* Validation Errors */}
                             {validationErrors.length > 0 && (
-                                <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30">
-                                    <div className="flex items-center gap-2 text-red-400 mb-2">
+                                <div className="p-4 rounded-lg bg-red-500/5 border border-red-500/20">
+                                    <div className="flex items-center gap-2 text-red-700 mb-2">
                                         <AlertTriangle className="w-5 h-5" />
                                         <span className="font-medium">Validation Errors</span>
                                     </div>
-                                    <ul className="list-disc list-inside text-sm text-red-400 space-y-1">
+                                    <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
                                         {validationErrors.map((error, idx) => (
                                             <li key={idx}>{error}</li>
                                         ))}
@@ -133,66 +134,66 @@ export function CatalogPublisher({ buildTypes }: CatalogPublisherProps) {
                             {/* Summary Cards */}
                             <div className="grid grid-cols-2 gap-4">
                                 {/* Production Summary */}
-                                <div className={`p-4 rounded-lg border ${
+                                    <div className={`p-4 rounded-lg border ${
                                     summary?.production 
-                                        ? 'bg-green-500/10 border-green-500/30' 
-                                        : 'bg-slate-700/30 border-slate-600/50'
+                                        ? 'bg-green-500/5 border-green-500/20' 
+                                        : 'bg-muted/30 border-border/80'
                                 }`}>
-                                    <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-3">
-                                        <span className="px-2 py-0.5 rounded-full text-xs bg-green-500/20 text-green-400">
+                                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                                        <span className="px-2 py-0.5 rounded-full text-xs bg-muted text-foreground">
                                             PRODUCTION
                                         </span>
                                     </h3>
                                     {summary?.production ? (
                                         <div className="space-y-2 text-sm">
-                                            <p className="text-slate-300">
-                                                Base Game: <span className="font-mono text-white">v{summary.production.version}</span>
+                                            <p className="text-muted-foreground">
+                                                Base Game: <span className="font-mono text-foreground">v{summary.production.version}</span>
                                             </p>
-                                            <div className="flex items-center gap-4 text-slate-400">
+                                            <div className="flex items-center gap-4 text-muted-foreground">
                                                 <span className="flex items-center gap-1">
-                                                    <Package className="w-4 h-4 text-blue-400" />
+                                                    <Package className="w-4 h-4 text-foreground" />
                                                     {summary.production.envCount} Environments
                                                 </span>
                                                 <span className="flex items-center gap-1">
-                                                    <Users className="w-4 h-4 text-purple-400" />
+                                                    <Users className="w-4 h-4 text-foreground" />
                                                     {summary.production.charCount} Characters
                                                 </span>
                                             </div>
                                         </div>
                                     ) : (
-                                        <p className="text-sm text-slate-500">No production build configured</p>
+                                        <p className="text-sm text-muted-foreground">No production build configured</p>
                                     )}
                                 </div>
 
                                 {/* Staging Summary */}
                                 <div className={`p-4 rounded-lg border ${
                                     summary?.staging 
-                                        ? 'bg-yellow-500/10 border-yellow-500/30' 
-                                        : 'bg-slate-700/30 border-slate-600/50'
+                                        ? 'bg-yellow-500/5 border-yellow-500/20' 
+                                        : 'bg-muted/30 border-border/80'
                                 }`}>
-                                    <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-3">
-                                        <span className="px-2 py-0.5 rounded-full text-xs bg-yellow-500/20 text-yellow-400">
+                                    <h3 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                                        <span className="px-2 py-0.5 rounded-full text-xs bg-muted text-foreground">
                                             STAGING
                                         </span>
                                     </h3>
                                     {summary?.staging ? (
                                         <div className="space-y-2 text-sm">
-                                            <p className="text-slate-300">
-                                                Base Game: <span className="font-mono text-white">v{summary.staging.version}</span>
+                                            <p className="text-muted-foreground">
+                                                Base Game: <span className="font-mono text-foreground">v{summary.staging.version}</span>
                                             </p>
-                                            <div className="flex items-center gap-4 text-slate-400">
+                                            <div className="flex items-center gap-4 text-muted-foreground">
                                                 <span className="flex items-center gap-1">
-                                                    <Package className="w-4 h-4 text-blue-400" />
+                                                    <Package className="w-4 h-4 text-foreground" />
                                                     {summary.staging.envCount} Environments
                                                 </span>
                                                 <span className="flex items-center gap-1">
-                                                    <Users className="w-4 h-4 text-purple-400" />
+                                                    <Users className="w-4 h-4 text-foreground" />
                                                     {summary.staging.charCount} Characters
                                                 </span>
                                             </div>
                                         </div>
                                     ) : (
-                                        <p className="text-sm text-slate-500">No staging build configured</p>
+                                        <p className="text-sm text-muted-foreground">No staging build configured</p>
                                     )}
                                 </div>
                             </div>
@@ -200,13 +201,13 @@ export function CatalogPublisher({ buildTypes }: CatalogPublisherProps) {
                             {/* Changes */}
                             {changes.length > 0 && (
                                 <div className="space-y-2">
-                                    <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
+                                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                                         Changes from Current Catalog
                                     </h3>
-                                    <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30 space-y-1">
+                                    <div className="p-4 rounded-lg bg-muted/30 border border-border/80 space-y-1">
                                         {changes.map((change, idx) => (
-                                            <p key={idx} className="text-sm text-blue-400 flex items-center gap-2">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                                            <p key={idx} className="text-sm text-foreground flex items-center gap-2">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-foreground"></span>
                                                 {change}
                                             </p>
                                         ))}
@@ -215,9 +216,9 @@ export function CatalogPublisher({ buildTypes }: CatalogPublisherProps) {
                             )}
 
                             {changes.length === 0 && currentCatalog && (
-                                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30 flex items-center gap-3">
-                                    <CheckCircle2 className="w-5 h-5 text-green-400" />
-                                    <span className="text-green-400">No changes detected from current catalog</span>
+                                <div className="p-4 rounded-lg bg-green-500/5 border border-green-500/20 flex items-center gap-3">
+                                    <CheckCircle2 className="w-5 h-5 text-green-700" />
+                                    <span className="text-green-700">No changes detected from current catalog</span>
                                 </div>
                             )}
 
@@ -245,7 +246,7 @@ export function CatalogPublisher({ buildTypes }: CatalogPublisherProps) {
                             <div className="p-3 rounded-lg bg-slate-700/30 border border-slate-600/50">
                                 <p className="text-sm text-slate-400">
                                     <span className="font-medium text-slate-300">Target URL:</span>{' '}
-                                    <span className="font-mono text-xs">{getCatalogUrl()}</span>
+                                    <span className="font-mono text-xs">{getCatalogUrl(r2Config)}</span>
                                 </p>
                             </div>
 

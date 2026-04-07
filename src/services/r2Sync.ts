@@ -4,8 +4,13 @@
 import type { DLC, DLCType, DLCLevel } from '../types/dlc';
 import { detectDLCTypeFromFolderName, generateDisplayNameFromFolderName } from '../types/dlc';
 import type { DLCCatalogEntry } from '../types/catalog';
+import type { R2Config } from '../types/settings';
 
-const R2_BASE_URL = 'https://pub-f87e49b41fad4c0fad84e94d65ed13cc.r2.dev';
+const DEFAULT_R2_BASE_URL = 'https://pub-f87e49b41fad4c0fad84e94d65ed13cc.r2.dev';
+
+export function resolveR2PublicBaseUrl(r2Config?: R2Config): string {
+    return r2Config?.publicBaseUrl?.trim() || DEFAULT_R2_BASE_URL;
+}
 
 export interface R2DLCInfo {
     folderName: string;
@@ -21,6 +26,7 @@ export interface R2DLCInfo {
     description?: string;
     iconUrl?: string;
     size?: number;
+    requiredModules?: Array<{ id: string; minVersion: string }>;
     requiredDLCs?: Array<{ id: string; minVersion: string }>;
 }
 
@@ -47,12 +53,13 @@ export interface R2SyncResult {
 /**
  * Detect build types by trying to read manifests from known build types
  */
-export async function detectBuildTypes(): Promise<('production' | 'staging')[]> {
+export async function detectBuildTypes(r2Config?: R2Config): Promise<('production' | 'staging')[]> {
     const buildTypes: ('production' | 'staging')[] = [];
+    const r2BaseUrl = resolveR2PublicBaseUrl(r2Config);
     
     for (const buildType of ['production', 'staging'] as const) {
         try {
-            const manifestUrl = `${R2_BASE_URL}/${buildType}/roleplayai_manifest.json`;
+            const manifestUrl = `${r2BaseUrl}/${buildType}/roleplayai_manifest.json`;
             const response = await fetch(manifestUrl, { method: 'HEAD' });
             if (response.ok) {
                 buildTypes.push(buildType);
@@ -68,9 +75,9 @@ export async function detectBuildTypes(): Promise<('production' | 'staging')[]> 
 /**
  * Read version from R2 manifest for a specific build type
  */
-export async function detectVersion(buildType: 'production' | 'staging'): Promise<string | null> {
+export async function detectVersion(buildType: 'production' | 'staging', r2Config?: R2Config): Promise<string | null> {
     try {
-        const manifestUrl = `${R2_BASE_URL}/${buildType}/roleplayai_manifest.json`;
+        const manifestUrl = `${resolveR2PublicBaseUrl(r2Config)}/${buildType}/roleplayai_manifest.json`;
         const response = await fetch(manifestUrl);
         
         if (!response.ok) {
@@ -95,7 +102,7 @@ const CATALOG_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 /**
  * Fetch catalog.json from R2 (with caching)
  */
-async function fetchCatalog(): Promise<any | null> {
+async function fetchCatalog(r2Config?: R2Config): Promise<any | null> {
     const now = Date.now();
     
     // Return cached catalog if still valid
@@ -104,7 +111,7 @@ async function fetchCatalog(): Promise<any | null> {
     }
     
     try {
-        const catalogUrl = `${R2_BASE_URL}/catalog.json?t=${now}`; // Cache busting
+        const catalogUrl = `${resolveR2PublicBaseUrl(r2Config)}/catalog.json?t=${now}`; // Cache busting
         const response = await fetch(catalogUrl);
         
         if (response.ok) {
@@ -127,10 +134,12 @@ async function fetchCatalog(): Promise<any | null> {
  */
 export async function readDLCManifest(
     buildType: 'production' | 'staging',
-    folderName: string
+    folderName: string,
+    r2Config?: R2Config
 ): Promise<R2DLCInfo | null> {
     // Strategy 1: Try unversioned manifest first (most common case)
-    let manifestUrl = `${R2_BASE_URL}/${buildType}/${folderName}/manifest.json`;
+    const r2BaseUrl = resolveR2PublicBaseUrl(r2Config);
+    let manifestUrl = `${r2BaseUrl}/${buildType}/${folderName}/manifest.json`;
     
     try {
         const response = await fetch(manifestUrl);
@@ -143,7 +152,7 @@ export async function readDLCManifest(
     }
     
     // Strategy 2: Check catalog.json for known manifest URL
-    const catalog = await fetchCatalog();
+    const catalog = await fetchCatalog(r2Config);
     if (catalog?.builds?.[buildType]?.dlcs) {
         const catalogDLC = catalog.builds[buildType].dlcs.find(
             (dlc: any) => dlc.folderName === folderName || dlc.id === folderName
@@ -199,6 +208,7 @@ function extractDLCInfoFromManifest(
         description: dlcMetadata.description || '',
         iconUrl: dlcMetadata.iconUrl || '',
         size: totalSize,
+        requiredModules: dlcMetadata.requiredDLCs || [],
         requiredDLCs: dlcMetadata.requiredDLCs || []
     };
 }
@@ -209,7 +219,8 @@ function extractDLCInfoFromManifest(
  */
 export async function detectDLCs(
     buildType: 'production' | 'staging',
-    knownDLCs?: Record<string, { folderName: string; version?: string }>
+    knownDLCs?: Record<string, { folderName: string; version?: string }>,
+    r2Config?: R2Config
 ): Promise<R2DLCInfo[]> {
     const detectedDLCs: R2DLCInfo[] = [];
     const checkedFolders = new Set<string>();
@@ -223,7 +234,7 @@ export async function detectDLCs(
             if (!dlc.folderName) continue;
             checkedFolders.add(dlc.folderName);
             
-            const dlcInfo = await readDLCManifest(buildType, dlc.folderName);
+            const dlcInfo = await readDLCManifest(buildType, dlc.folderName, r2Config);
             if (dlcInfo) {
                 console.log(`[R2Sync] Found known DLC: ${dlc.folderName} v${dlcInfo.version} (type: ${dlcInfo.type})`);
                 detectedDLCs.push(dlcInfo);
@@ -251,7 +262,7 @@ export async function detectDLCs(
             continue;
         }
         
-        const dlcInfo = await readDLCManifest(buildType, pattern);
+        const dlcInfo = await readDLCManifest(buildType, pattern, r2Config);
         if (dlcInfo) {
             console.log(`[R2Sync] ✓ Discovered: ${pattern} v${dlcInfo.version} (type: ${dlcInfo.type}, level: ${dlcInfo.level})`);
             detectedDLCs.push(dlcInfo);
@@ -272,7 +283,8 @@ export async function detectDLCs(
 export async function previewSyncChanges(
     buildType: 'production' | 'staging',
     currentVersion: string | null | undefined,
-    currentDLCs: Record<string, { folderName: string; version: string }>
+    currentDLCs: Record<string, { folderName: string; version: string }>,
+    r2Config?: R2Config
 ): Promise<R2SyncPreview> {
     const preview: R2SyncPreview = {
         buildType,
@@ -289,7 +301,7 @@ export async function previewSyncChanges(
     };
     
     // Detect base game version
-    const r2Version = await detectVersion(buildType);
+    const r2Version = await detectVersion(buildType, r2Config);
     if (r2Version) {
         preview.version.r2 = r2Version;
         if (!currentVersion) {
@@ -300,7 +312,7 @@ export async function previewSyncChanges(
     }
     
     // Detect DLCs with full metadata
-    const r2DLCs = await detectDLCs(buildType, currentDLCs);
+    const r2DLCs = await detectDLCs(buildType, currentDLCs, r2Config);
     const currentDLCsByFolder = Object.fromEntries(
         Object.entries(currentDLCs).map(([id, dlc]) => [dlc.folderName, { id, ...dlc }])
     );
@@ -374,6 +386,7 @@ export function r2DLCInfoToCatalogEntry(info: R2DLCInfo): DLCCatalogEntry {
         version: info.version,
         manifestUrl: info.manifestUrl,
         requiredBaseVersion: info.requiredBaseVersion || null,
+        requiredModules: info.requiredModules || info.requiredDLCs || [],
         requiredDLCs: info.requiredDLCs || [],
         description: info.description || '',
         iconUrl: info.iconUrl || '',

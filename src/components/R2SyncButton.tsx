@@ -7,12 +7,14 @@ import { generateCatalog } from '../services/catalogPublisher';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { DLC } from '../types/dlc';
+import type { R2Config } from '../types/settings';
 
 interface R2SyncButtonProps {
     appId: string;
     buildType: 'production' | 'staging';
     currentVersion?: string | null;
     currentDLCs: Record<string, DLC>;
+    r2Config?: R2Config;
     onSyncComplete?: () => void;
 }
 
@@ -26,7 +28,7 @@ interface SyncPreview {
     currentDLCCount: number;
 }
 
-export function R2SyncButton({ appId, buildType, currentVersion, currentDLCs, onSyncComplete }: R2SyncButtonProps) {
+export function R2SyncButton({ appId, buildType, currentVersion, currentDLCs, r2Config, onSyncComplete }: R2SyncButtonProps) {
     const [loading, setLoading] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
     const [preview, setPreview] = useState<SyncPreview | null>(null);
@@ -36,10 +38,10 @@ export function R2SyncButton({ appId, buildType, currentVersion, currentDLCs, on
         setLoading(true);
         try {
             // Detect version from R2
-            const r2Version = await detectVersion(buildType);
+            const r2Version = await detectVersion(buildType, r2Config);
             
             // Detect ALL DLCs from R2 (this is now the source of truth)
-            const detectedDLCs = await detectDLCs(buildType, {});
+            const detectedDLCs = await detectDLCs(buildType, {}, r2Config);
             
             // Get current DLC count directly from Firebase (more reliable than prop)
             let currentDLCCount = Object.keys(currentDLCs).length;
@@ -146,7 +148,7 @@ export function R2SyncButton({ appId, buildType, currentVersion, currentDLCs, on
     const saveCatalogToFirebase = async (appId: string, buildTypes: any) => {
         try {
             // Generate catalog from current buildTypes data
-            const catalog = generateCatalog(buildTypes);
+            const catalog = generateCatalog(buildTypes, r2Config);
             
             console.log('Generated catalog:', catalog);
             
@@ -216,7 +218,6 @@ export function R2SyncButton({ appId, buildType, currentVersion, currentDLCs, on
                 variant="outline"
                 onClick={handleSync}
                 disabled={loading || syncing}
-                className="border-blue-600/50 text-blue-400 hover:bg-blue-600/10 hover:text-blue-300"
             >
                 {loading ? (
                     <>
@@ -233,21 +234,21 @@ export function R2SyncButton({ appId, buildType, currentVersion, currentDLCs, on
 
             {showPreview && preview && (
                 <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                    <Card className="bg-slate-800 border-slate-700 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <Card className="admin-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <CardTitle className="text-white flex items-center gap-2">
+                                    <CardTitle className="flex items-center gap-2">
                                         R2 Sync Preview
                                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                             buildType === 'production' 
-                                                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                                : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                                                ? 'bg-green-500/5 text-green-700 border border-green-500/20'
+                                                : 'bg-yellow-500/5 text-yellow-700 border border-yellow-500/20'
                                         }`}>
                                             {buildType.toUpperCase()}
                                         </span>
                                     </CardTitle>
-                                    <CardDescription className="text-slate-400">
+                                    <CardDescription>
                                         R2 is the source of truth. All data will be synced from R2.
                                     </CardDescription>
                                 </div>
@@ -258,7 +259,7 @@ export function R2SyncButton({ appId, buildType, currentVersion, currentDLCs, on
                                         setShowPreview(false);
                                         setPreview(null);
                                     }}
-                                    className="text-slate-400 hover:text-white"
+                                    className="text-muted-foreground hover:text-foreground"
                                 >
                                     <X className="w-4 h-4" />
                                 </Button>
@@ -267,19 +268,19 @@ export function R2SyncButton({ appId, buildType, currentVersion, currentDLCs, on
                         <CardContent className="space-y-6">
                             {/* Version Info */}
                             <div className="space-y-2">
-                                <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">Base Game Version</h3>
-                                <div className="p-4 rounded-lg bg-slate-700/30 border border-slate-600/50">
+                                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Base Game Version</h3>
+                                <div className="admin-muted-panel p-4">
                                     <div className="flex justify-between items-center">
                                         <div className="space-y-1">
-                                            <p className="text-sm text-slate-400">
-                                                Current: <span className="text-white font-mono">{preview.version.current || 'Not set'}</span>
+                                            <p className="text-sm text-muted-foreground">
+                                                Current: <span className="text-foreground font-mono">{preview.version.current || 'Not set'}</span>
                                             </p>
-                                            <p className="text-sm text-slate-400">
-                                                R2: <span className="text-white font-mono">{preview.version.r2 || 'Not found'}</span>
+                                            <p className="text-sm text-muted-foreground">
+                                                R2: <span className="text-foreground font-mono">{preview.version.r2 || 'Not found'}</span>
                                             </p>
                                         </div>
                                         {preview.version.r2 && (
-                                            <CheckCircle2 className="w-5 h-5 text-green-400" />
+                                            <CheckCircle2 className="w-5 h-5 text-green-700" />
                                         )}
                                     </div>
                                 </div>
@@ -287,21 +288,21 @@ export function R2SyncButton({ appId, buildType, currentVersion, currentDLCs, on
 
                             {/* DLCs Detected from R2 */}
                             <div className="space-y-4">
-                                <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">
+                                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                                     DLCs Detected from R2 ({preview.detectedDLCs.length})
                                 </h3>
                                 
                                 {preview.detectedDLCs.length > 0 ? (
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2 mb-3">
-                                            <div className="w-2 h-2 rounded-full bg-blue-400"></div>
-                                            <p className="text-sm text-blue-400 font-medium">
+                                            <div className="w-2 h-2 rounded-full bg-foreground"></div>
+                                            <p className="text-sm text-foreground font-medium">
                                                 Will replace {preview.currentDLCCount} existing DLC(s) with {preview.detectedDLCs.length} from R2
                                             </p>
                                         </div>
                                         <div className="space-y-2 max-h-60 overflow-y-auto">
                                             {preview.detectedDLCs.map((dlc, idx) => (
-                                                <div key={idx} className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                                                <div key={idx} className="admin-muted-panel p-3">
                                                     {renderDLCInfo(dlc)}
                                                 </div>
                                             ))}
@@ -310,21 +311,21 @@ export function R2SyncButton({ appId, buildType, currentVersion, currentDLCs, on
                                 ) : (
                                     <div className={`p-4 rounded-lg border text-center ${
                                         willClearDLCs 
-                                            ? 'bg-red-500/10 border-red-500/30' 
-                                            : 'bg-slate-700/30 border-slate-600/50'
+                                            ? 'bg-red-500/5 border-red-500/20' 
+                                            : 'bg-muted/30 border-border/80'
                                     }`}>
                                         <AlertTriangle className={`w-8 h-8 mx-auto mb-2 ${
-                                            willClearDLCs ? 'text-red-400' : 'text-slate-500'
+                                            willClearDLCs ? 'text-red-700' : 'text-muted-foreground'
                                         }`} />
-                                        <p className={`text-sm ${willClearDLCs ? 'text-red-400 font-medium' : 'text-slate-400'}`}>
+                                        <p className={`text-sm ${willClearDLCs ? 'text-red-700 font-medium' : 'text-muted-foreground'}`}>
                                             No DLCs found in R2 for {buildType}
                                         </p>
                                         {willClearDLCs ? (
-                                            <p className="text-xs text-red-400/80 mt-1">
+                                            <p className="text-xs text-red-700/80 mt-1">
                                                 ⚠️ This will CLEAR {preview.currentDLCCount} existing DLC(s) from Firebase
                                             </p>
                                         ) : (
-                                            <p className="text-xs text-slate-500 mt-1">Upload DLCs using the Uploader tool first</p>
+                                            <p className="text-xs text-muted-foreground mt-1">Upload DLCs using the Uploader tool first</p>
                                         )}
                                     </div>
                                 )}
@@ -334,17 +335,17 @@ export function R2SyncButton({ appId, buildType, currentVersion, currentDLCs, on
                             {(hasDetectedContent || willClearDLCs) && (
                                 <div className={`p-4 rounded-lg border ${
                                     willClearDLCs 
-                                        ? 'bg-red-500/10 border-red-500/30' 
-                                        : 'bg-yellow-500/10 border-yellow-500/30'
+                                        ? 'bg-red-500/5 border-red-500/20' 
+                                        : 'bg-yellow-500/5 border-yellow-500/20'
                                 }`}>
                                     <div className="flex items-start gap-3">
                                         <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                                            willClearDLCs ? 'text-red-400' : 'text-yellow-400'
+                                            willClearDLCs ? 'text-red-700' : 'text-yellow-700'
                                         }`} />
-                                        <div className={`text-sm ${willClearDLCs ? 'text-red-400' : 'text-yellow-400'}`}>
+                                        <div className={`text-sm ${willClearDLCs ? 'text-red-700' : 'text-yellow-700'}`}>
                                             <p className="font-medium mb-1">This will:</p>
                                             <ul className={`list-disc list-inside space-y-1 ${
-                                                willClearDLCs ? 'text-red-400/80' : 'text-yellow-400/80'
+                                            willClearDLCs ? 'text-red-700/80' : 'text-yellow-700/80'
                                             }`}>
                                                 {willClearDLCs ? (
                                                     <>
@@ -367,25 +368,20 @@ export function R2SyncButton({ appId, buildType, currentVersion, currentDLCs, on
                             )}
 
                             {/* Actions */}
-                            <div className="flex gap-2 justify-end pt-4 border-t border-slate-700">
+                            <div className="flex gap-2 justify-end pt-4 border-t border-border/80">
                                 <Button
                                     variant="outline"
                                     onClick={() => {
                                         setShowPreview(false);
                                         setPreview(null);
                                     }}
-                                    className="border-slate-600 text-slate-300"
                                 >
                                     Cancel
                                 </Button>
                                 <Button
                                     onClick={handleApplySync}
                                     disabled={syncing || (!hasDetectedContent && !willClearDLCs)}
-                                    className={`text-white ${
-                                        willClearDLCs 
-                                            ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700' 
-                                            : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'
-                                    }`}
+                                    className="text-white"
                                 >
                                     {syncing ? (
                                         <>

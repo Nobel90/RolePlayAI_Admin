@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { ArrowRight, Loader2, Shield } from 'lucide-react'
 
 export function Login() {
   const [email, setEmail] = useState('')
@@ -27,28 +28,30 @@ export function Login() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-20"></div>
-      <Card className="w-full max-w-md relative z-10 shadow-2xl border-slate-700/50 bg-slate-800/80 backdrop-blur-xl">
-        <CardHeader className="space-y-1 pb-6">
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-              </svg>
+    <div className="admin-shell flex min-h-screen items-center justify-center p-4">
+      <div className="absolute inset-0 pointer-events-none opacity-70">
+        <div className="absolute left-10 top-20 h-72 w-72 rounded-full bg-foreground/5 blur-3xl" />
+        <div className="absolute bottom-12 right-12 h-80 w-80 rounded-full bg-foreground/4 blur-3xl" />
+      </div>
+      <Card className="relative z-10 w-full max-w-md border-border/80 bg-card/90 shadow-[0_30px_80px_rgba(0,0,0,0.12)] animate-fade-in">
+        <CardHeader className="space-y-4 pb-8">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-border/80 bg-background">
+              <Shield className="h-6 w-6" />
+            </div>
+            <div className="text-right">
+              <p className="admin-kicker">RolePlayAI</p>
+              <CardTitle className="text-2xl">Admin Console</CardTitle>
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold text-center bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            RolePlayAI Admin
-          </CardTitle>
-          <CardDescription className="text-center text-slate-400">
-            Sign in to manage launcher settings
+          <CardDescription className="max-w-sm">
+            Sign in to manage launcher settings, DLC workflows, and catalog publishing.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-300">Email</Label>
+              <Label htmlFor="email">Email</Label>
               <Input 
                 id="email" 
                 type="email" 
@@ -56,44 +59,45 @@ export function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-300">Password</Label>
+              <Label htmlFor="password">Password</Label>
               <Input 
                 id="password" 
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-purple-500/20"
               />
             </div>
             {error && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                <p className="text-red-400 text-sm text-center">{error}</p>
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-3">
+                <p className="text-center text-sm text-red-600">{error}</p>
               </div>
             )}
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col gap-3">
             <Button 
               type="submit" 
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300" 
+              className="w-full"
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Signing In...
                 </>
               ) : (
-                'Sign In'
+                <>
+                  Sign In
+                  <ArrowRight className="h-4 w-4" />
+                </>
               )}
             </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              Authorized access only. Activity is audited.
+            </p>
           </CardFooter>
         </form>
       </Card>

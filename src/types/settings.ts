@@ -19,6 +19,7 @@ export interface BuildTypeData {
 }
 
 export interface R2Config {
+    publicBaseUrl?: string;
     endpoint?: string;
     accountId?: string;
     accessKeyId?: string;
@@ -63,4 +64,3 @@ export interface LauncherSettings {
     lastCatalog?: any;
     lastCatalogUpdated?: string;
 }
-

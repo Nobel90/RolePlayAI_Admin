@@ -3,8 +3,9 @@
 
 import type { Catalog, BuildCatalog, DLCCatalogEntry } from '../types/catalog';
 import type { DLC } from '../types/dlc';
+import type { R2Config } from '../types/settings';
 
-const R2_BASE_URL = 'https://pub-f87e49b41fad4c0fad84e94d65ed13cc.r2.dev';
+const DEFAULT_R2_BASE_URL = 'https://pub-f87e49b41fad4c0fad84e94d65ed13cc.r2.dev';
 
 export interface CatalogPublishResult {
     success: boolean;
@@ -20,7 +21,8 @@ export function generateCatalog(
     buildTypes: {
         production?: { version?: string; dlcs?: Record<string, DLC> };
         staging?: { version?: string; dlcs?: Record<string, DLC> };
-    }
+    },
+    r2Config?: R2Config
 ): Catalog {
     const catalog: Catalog = {
         catalogVersion: '1.0',
@@ -34,7 +36,8 @@ export function generateCatalog(
         catalog.builds.production = generateBuildCatalog(
             'production',
             buildTypes.production.version,
-            buildTypes.production.dlcs
+            buildTypes.production.dlcs,
+            r2Config
         );
     }
 
@@ -43,11 +46,16 @@ export function generateCatalog(
         catalog.builds.staging = generateBuildCatalog(
             'staging',
             buildTypes.staging.version,
-            buildTypes.staging.dlcs
+            buildTypes.staging.dlcs,
+            r2Config
         );
     }
 
     return catalog;
+}
+
+export function resolveR2PublicBaseUrl(r2Config?: R2Config): string {
+    return r2Config?.publicBaseUrl?.trim() || DEFAULT_R2_BASE_URL;
 }
 
 /**
@@ -56,12 +64,14 @@ export function generateCatalog(
 function generateBuildCatalog(
     buildType: 'production' | 'staging',
     version?: string,
-    dlcs?: Record<string, DLC>
+    dlcs?: Record<string, DLC>,
+    r2Config?: R2Config
 ): BuildCatalog {
+    const r2BaseUrl = resolveR2PublicBaseUrl(r2Config);
     const buildCatalog: BuildCatalog = {
         baseGame: {
             version: version || '0.0.0',
-            manifestUrl: `${R2_BASE_URL}/${buildType}/roleplayai_manifest.json`,
+            manifestUrl: `${r2BaseUrl}/${buildType}/roleplayai_manifest.json`,
             minLauncherVersion: '1.0.0',
             lastUpdated: new Date().toISOString()
         },
@@ -72,7 +82,7 @@ function generateBuildCatalog(
         // Convert DLCs to catalog entries and sort by hierarchy
         const dlcEntries = Object.values(dlcs)
             .filter(dlc => dlc.enabled) // Only include enabled DLCs
-            .map(dlc => dlcToCatalogEntry(dlc, buildType))
+            .map(dlc => dlcToCatalogEntry(dlc, buildType, r2BaseUrl))
             .sort((a, b) => {
                 // Sort by level first (environments before characters)
                 if (a.level !== b.level) {
@@ -91,12 +101,12 @@ function generateBuildCatalog(
 /**
  * Convert DLC to catalog entry
  */
-function dlcToCatalogEntry(dlc: DLC, buildType: 'production' | 'staging'): DLCCatalogEntry {
+function dlcToCatalogEntry(dlc: DLC, buildType: 'production' | 'staging', r2BaseUrl: string): DLCCatalogEntry {
     // Determine the best manifest URL
     let manifestUrl = dlc.manifestUrl;
     if (!manifestUrl || !manifestUrl.startsWith('http')) {
         // Generate URL if not provided
-        manifestUrl = `${R2_BASE_URL}/${buildType}/${dlc.folderName}/manifest.json`;
+        manifestUrl = `${r2BaseUrl}/${buildType}/${dlc.folderName}/manifest.json`;
     }
 
     return {
@@ -110,6 +120,9 @@ function dlcToCatalogEntry(dlc: DLC, buildType: 'production' | 'staging'): DLCCa
         version: dlc.version,
         manifestUrl: manifestUrl,
         requiredBaseVersion: dlc.requiredBaseVersion || null,
+        requiredModules: dlc.requiredDLCs || (dlc.parentId && dlc.parentVersion 
+            ? [{ id: dlc.parentId, minVersion: dlc.parentVersion }] 
+            : []),
         requiredDLCs: dlc.requiredDLCs || (dlc.parentId && dlc.parentVersion 
             ? [{ id: dlc.parentId, minVersion: dlc.parentVersion }] 
             : []),
@@ -127,9 +140,10 @@ export function previewCatalog(
     buildTypes: {
         production?: { version?: string; dlcs?: Record<string, DLC> };
         staging?: { version?: string; dlcs?: Record<string, DLC> };
-    }
+    },
+    r2Config?: R2Config
 ): Catalog {
-    return generateCatalog(buildTypes);
+    return generateCatalog(buildTypes, r2Config);
 }
 
 /**
@@ -227,16 +241,16 @@ export function formatCatalogJSON(catalog: Catalog): string {
 /**
  * Get the catalog URL for a given R2 bucket
  */
-export function getCatalogUrl(): string {
-    return `${R2_BASE_URL}/catalog.json`;
+export function getCatalogUrl(r2Config?: R2Config): string {
+    return `${resolveR2PublicBaseUrl(r2Config)}/catalog.json`;
 }
 
 /**
  * Fetch current catalog from R2
  */
-export async function fetchCurrentCatalog(): Promise<Catalog | null> {
+export async function fetchCurrentCatalog(r2Config?: R2Config): Promise<Catalog | null> {
     try {
-        const response = await fetch(getCatalogUrl());
+        const response = await fetch(`${resolveR2PublicBaseUrl(r2Config)}/catalog.json`);
         if (!response.ok) {
             return null;
         }
